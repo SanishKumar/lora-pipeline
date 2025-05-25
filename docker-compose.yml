@@ -1,0 +1,54 @@
+version: '3.8'
+
+services:
+  lora-trainer:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.training
+    volumes:
+      - ./data:/app/data
+      - ./models:/app/models
+      - ./logs:/app/logs
+      - ./configs:/app/configs
+    environment:
+      - CUDA_VISIBLE_DEVICES=0
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    profiles:
+      - training
+
+  lora-api:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.serving
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./models:/app/models
+    environment:
+      - CUDA_VISIBLE_DEVICES=0
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    profiles:
+      - serving
+
+  web-ui:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.ui
+    ports:
+      - "3000:3000"
+    depends_on:
+      - lora-api
+    profiles:
+      - ui
